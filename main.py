@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 
 class Course:
     # Class representing info for a course
+
     def __init__(self, name, subject, creds, code, instructor, _grade, _date):
         self.name = name
         self.subject = subject
@@ -16,7 +17,8 @@ class Course:
         self.__grade = _grade
 
     def __str__(self):
-        return "\t" + self.subject + self.code + " - " + self.name + " - " + self.instructor + " - " + str(self.credits) + " units" + " - " + self.__grade
+        return "\t" + self.subject + self.code + " - " + self.name + " - " + self.instructor + " - " + str(
+            self.credits) + " units" + " - " + self.__grade
 
 
 class Semester:
@@ -31,12 +33,12 @@ class Semester:
 
 class Student:
     # Class for a student taking multiple courses
-    def __init__(self, _name, _id, _major, _minor, _cumgpa):
+    def __init__(self, _name=None, _id=None, _major=None, _minor=None, _cumgpa=None):
         self.name = _name
         self.id = _id
         self.major = _major
         self.minor = _minor
-        self.cumgpa = float(_cumgpa)
+        self.cumgpa = float(_cumgpa) if _cumgpa is not None else 0.0
         self.history = dict()
 
     def addSemester(self, name, semesterx):
@@ -54,6 +56,10 @@ class Student:
         print(self.name + " is pursuing a major in " + self.major + " with a cumulative GPA of " + str(self.cumgpa))
         if self.minor != "":
             print("also, a minor: " + self.minor)
+
+    def getSemClasses(self, semester):
+        # Returns a list of all classes taken in a given semester
+        return self.history[semester].courses
 
     def getClasses(self):
         # Returns a list of all classes taken by the student
@@ -119,7 +125,9 @@ def extractSemesterCourses(semester, transcript):
             tempSubject = temp[0]
             tempCode = temp[1]
             i = 2
-            while i < len(temp) - 1 and temp[i].find('.') == -1:
+            while i < len(temp) - 1:
+                if temp[i].find('.') != -1 and "".join(temp[i].split(".")).isnumeric():
+                    break
                 tempName += temp[i] + " "
                 i += 1
             tempCredits = temp[i]
@@ -139,6 +147,29 @@ def extractSemesterCourses(semester, transcript):
             tempSubject = ""
 
     return courses, termGPA
+
+
+def mainMenu():
+    # Main menu for the program
+    print("\u001b[32mTranscript management time!\033[0m")
+    members = loadTranscripts("E:\\trspts\\")
+    temp = True
+    while temp:
+        print("Please select an option:")
+        print("1. Get info for a student")
+        print("2. Get info for all students")
+        print("3. Exit")
+        print("\n"*3)
+        choice = input("Enter your choice: ")
+        if choice == "1":
+            singleStudent(members)
+        elif choice == "2":
+            wholeOrg(members)
+        elif choice == "3":
+            print("\033[31;1;4mExiting... \033[0m")
+            return
+        else:
+            print("Invalid choice")
 
 
 def getTranscript(filename):
@@ -177,7 +208,6 @@ def getStudentCumulative(transcript):
 
 def generateStudent(transcript):
     # makes a student object
-
     semesters = []
     tempIndex = transcript.find("Beginning of Undergraduate  Record") + 35
     major = ""
@@ -198,7 +228,8 @@ def generateStudent(transcript):
             if "Minor" in temp:
                 minor = temp[:temp.find("Minor") - 5]
 
-    student = Student(getStudentName(transcript), int(getStudentId(transcript)), major, minor, getStudentCumulative(transcript))
+    student = Student(getStudentName(transcript), int(getStudentId(transcript)), major, minor,
+                      getStudentCumulative(transcript))
 
     for semester in semesters:
         tempsem = extractSemesterCourses(semester, transcript)
@@ -215,11 +246,74 @@ def loadTranscripts(path):
             transcript = getTranscript(path + file)
             stu = generateStudent(transcript)
             transcripts.append(stu)
+    print("Loaded " + str(len(transcripts)) + " transcripts.")
     return transcripts
 
 
-def main():
-    allstudents = loadTranscripts("E:\\trspts\\")
-    allstudents[5].plotStudentProgress()
+def getStudentByName(name, studentList):
+    returnables = []
+    for student in studentList:
+        if name in student.name:
+            returnables.append(student)
 
-main()
+    if len(returnables) > 1:
+        print("More than one student found. Select a choice: ")
+        for i in range(len(returnables)):
+            print(str(i + 1) + ": " + returnables[i].name)
+        choice = int(input())
+        return returnables[choice - 1]
+    elif len(returnables) == 1:
+        return returnables[0]
+    else:
+        print("No student found. Try again.")
+        return None
+
+
+def createClassDist(studentList, semester):
+    # plots a histogram of the distribution of classes taken by students
+    classes = {}
+    if semester == "all":
+        for student in studentList:
+            for course in student.getClasses():
+                if course.subject in classes:
+                    classes[course.subject] += 1
+                else:
+                    classes[course.subject] = 1
+    else:
+        for student in studentList:
+            for course in student.getSemClasses(semester):
+                if (course.subject + course.code) in classes:
+                    classes[course.subject + course.code] += 1
+                else:
+                    classes[course.subject + course.code] = 1
+
+    # plot the dictionary
+    plt.title("Class Distribution For " + semester)
+    plt.bar(classes.keys(), classes.values(), color='g')
+    plt.show()
+
+
+def singleStudent(members):
+    stu = None
+    while stu is None:
+        name = input("Enter a name: ")
+        stu = getStudentByName(name, members)
+
+    stu.prStu()
+    stu.plotStudentProgress()
+
+
+def wholeOrg(members):
+    # plots the progress of the whole organization
+    semesters = []
+    for student in members:
+        for semester in student.semester:
+            if semester not in semesters:
+                semesters.append(semester)
+    semesters.sort()
+    for semester in semesters:
+        print(semester)
+        createClassDist(members, semester)
+
+
+mainMenu()
