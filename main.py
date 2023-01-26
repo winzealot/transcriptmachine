@@ -159,7 +159,7 @@ def mainMenu():
         print("1. Get info for a student")
         print("2. Get info for all students")
         print("3. Exit")
-        print("\n"*3)
+        print("\n" * 3)
         choice = input("Enter your choice: ")
         if choice == "1":
             singleStudent(members)
@@ -236,6 +236,50 @@ def generateStudent(transcript):
         student.addSemester(semester, Semester(tempsem[0], tempsem[1]))
 
     return student
+
+
+def groupStudentsMM(studentList):
+    # groups students by major and minor
+    majors = {}
+    minors = {}
+    for student in studentList:
+        if student.major not in majors:
+            majors[student.major] = []
+        elif student.minor not in minors:
+            minors[student.minor] = []
+        majors[student.major].append(student)
+        if student.minor != "":
+            minors[student.minor].append(student)
+    return majors, minors
+
+
+def groupStudentsClass(studentList, semester):
+    # groups students by classes they're taking, by semester specifically
+    classes = {}
+    for student in studentList:
+        for course in student.semesters[semester].courses:
+            if (course.subject + course.code) not in classes.keys():
+                classes[course.subject + course.code] = []
+            classes[course.subject + course.code].append(student)
+    return classes
+
+
+def plotPieChartMMorclass(dataset):
+    # plots a pie chart of majors/minors
+    frequencies = {}
+    for key in dataset.keys():
+        freqencies[key] = len(dataset[key])
+    plt.pie(freqencies.values(), labels=freqencies.keys(), autopct='%1.1f%%')
+    plt.show()
+
+
+def plotPieChartSubjects(dataset):
+    # plots a pie chart of classes
+    frequencies = {}
+    for key in dataset.keys():
+        frequencies[key[:-4]] = len(dataset[key])
+    plt.pie(frequencies.values(), labels=frequencies.keys(), autopct='%1.1f%%')
+    plt.show()
 
 
 def loadTranscripts(path):
