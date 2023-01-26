@@ -171,6 +171,26 @@ def mainMenu():
         else:
             print("Invalid choice")
 
+def groupMenu():
+    # Menu for the group options
+    print("\u001b[32mGroup options!\033[0m")
+    print("Please select an option:")
+    print("1. Group students by major/minor")
+    print("2. Group students by GPA")
+    print("3. Group students by classes")
+    print("4. Go back")
+    print("\n" * 3)
+    choice = input("Enter your choice: ")
+    while int(choice) < 1 or int(choice) > 4:
+        choice = input("Wrong entry, try again: ")
+    if choice == "1":
+        majors, minors = groupStudentsMM()
+        plotPieChartMMclass(majors)
+
+
+
+
+
 
 def getTranscript(filename):
     ts = ""
@@ -250,6 +270,17 @@ def groupStudentsMM(studentList):
         majors[student.major].append(student)
         if student.minor != "":
             minors[student.minor].append(student)
+
+    for major in majors:
+        if len(majors[major]) >= 1:
+            print("Group found for " + major)
+            for student in majors[major]:
+                print(student.name)
+    for minor in minors:
+        if len(minors[minor]) >= 1:
+            print("Group found for " + minor)
+            for student in minors[minor]:
+                print(student.name)
     return majors, minors
 
 
@@ -261,10 +292,16 @@ def groupStudentsClass(studentList, semester):
             if (course.subject + course.code) not in classes.keys():
                 classes[course.subject + course.code] = []
             classes[course.subject + course.code].append(student)
+    for cls in classes:
+        if len(classes[cls]) >= 1:
+            print("Group found for " + cls)
+            for student in classes[cls]:
+                print(student.name)
+
     return classes
 
 
-def plotPieChartMMorclass(dataset):
+def plotPieChartMMclass(dataset):
     # plots a pie chart of majors/minors
     frequencies = {}
     for key in dataset.keys():
@@ -274,7 +311,7 @@ def plotPieChartMMorclass(dataset):
 
 
 def plotPieChartSubjects(dataset):
-    # plots a pie chart of classes
+    # plots a pie chart of subjects currently being taken
     frequencies = {}
     for key in dataset.keys():
         frequencies[key[:-4]] = len(dataset[key])
