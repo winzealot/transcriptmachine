@@ -158,7 +158,8 @@ def mainMenu():
         print("Please select an option:")
         print("1. Get info for a student")
         print("2. Get info for all students")
-        print("3. Exit")
+        print("3. Group tools")
+        print("4. Exit")
         print("\n" * 3)
         choice = input("Enter your choice: ")
         if choice == "1":
@@ -166,30 +167,35 @@ def mainMenu():
         elif choice == "2":
             wholeOrg(members)
         elif choice == "3":
+            groupMenu(members)
+        elif choice == "4":
             print("\033[31;1;4mExiting... \033[0m")
             return
         else:
             print("Invalid choice")
 
-def groupMenu():
+def groupMenu(mb):
     # Menu for the group options
-    print("\u001b[32mGroup options!\033[0m")
+    print("\u001b[32mGroup tools!\033[0m")
     print("Please select an option:")
     print("1. Group students by major/minor")
-    print("2. Group students by GPA")
-    print("3. Group students by classes")
-    print("4. Go back")
+    print("2. Group students by classes")
+    print("3. Go back")
     print("\n" * 3)
     choice = input("Enter your choice: ")
     while int(choice) < 1 or int(choice) > 4:
         choice = input("Wrong entry, try again: ")
     if choice == "1":
-        majors, minors = groupStudentsMM()
+        majors = groupStudentsMM(mb)
         plotPieChartMMclass(majors)
+        # if len(minors) > 0:
+        #     plotPieChartMMclass(minors)
+    elif choice == "2":
+        cls = groupStudentsClass(mb, "SP 2023")
+        plotPieChartSubjects(cls)
 
-
-
-
+    elif choice == "3":
+        return
 
 
 def getTranscript(filename):
@@ -201,8 +207,13 @@ def getTranscript(filename):
 
 def getStudentName(transcript):
     # returns the name of the student
+    #print(transcript)
     temp = transcript.split('\n')
-    temp = temp[1][temp[1].find("Name:") + 6:]
+    try:
+        temp = temp[1][temp[1].find("Name:") + 6:]
+    except:
+        print("Error in getStudentName", temp)
+        exit()
     temp = [item for item in temp.split(' ') if item != '']
     name = ""
     for item in temp:
@@ -239,7 +250,7 @@ def generateStudent(transcript):
                 ts[i].find('WI 20') != -1):
             semesters.append(ts[i])
         if ts[i].find("Plan:") != -1:
-            if (ts[i].find("Unofficial Transcript") != -1):
+            if ts[i].find("Unofficial Transcript") != -1:
                 temp = ts[i][6:ts[i].find("Unofficial Transcript")]
             else:
                 temp = ts[i][6:]
@@ -261,43 +272,47 @@ def generateStudent(transcript):
 def groupStudentsMM(studentList):
     # groups students by major and minor
     majors = {}
-    minors = {}
+    #minors = {}
     for student in studentList:
-        if student.major not in majors:
+        if student.major not in majors.keys():
             majors[student.major] = []
-        elif student.minor not in minors:
-            minors[student.minor] = []
+        #elif student.minor not in minors.keys():
+            #minors[student.minor] = []
         majors[student.major].append(student)
-        if student.minor != "":
-            minors[student.minor].append(student)
+        #if student.minor != "":
+            #minors[student.minor].append(student)
 
     for major in majors:
-        if len(majors[major]) >= 1:
-            print("Group found for " + major)
+        if len(majors[major]) > 1:
+            print("\nGroup found for " + major)
             for student in majors[major]:
-                print(student.name)
-    for minor in minors:
-        if len(minors[minor]) >= 1:
-            print("Group found for " + minor)
-            for student in minors[minor]:
-                print(student.name)
-    return majors, minors
+                print("\t-\t", student.name)
+    # for minor in minors:
+    #     if len(minors[minor]) >= 1:
+    #         print("Group found for " + minor)
+    #         for student in minors[minor]:
+    #             print(student.name)
+    #
+    print('\n')
+    return majors#, minors
 
 
 def groupStudentsClass(studentList, semester):
     # groups students by classes they're taking, by semester specifically
     classes = {}
     for student in studentList:
-        for course in student.semesters[semester].courses:
+        if semester not in student.history.keys():
+            continue
+        for course in student.history[semester].courses:
             if (course.subject + course.code) not in classes.keys():
                 classes[course.subject + course.code] = []
             classes[course.subject + course.code].append(student)
     for cls in classes:
-        if len(classes[cls]) >= 1:
-            print("Group found for " + cls)
+        if len(classes[cls]) > 1:
+            print("\nGroup found for " + cls)
             for student in classes[cls]:
-                print(student.name)
-
+                print("\t-\t", student.name)
+    print('\n')
     return classes
 
 
@@ -305,8 +320,10 @@ def plotPieChartMMclass(dataset):
     # plots a pie chart of majors/minors
     frequencies = {}
     for key in dataset.keys():
-        freqencies[key] = len(dataset[key])
-    plt.pie(freqencies.values(), labels=freqencies.keys(), autopct='%1.1f%%')
+        frequencies[key] = len(dataset[key])
+    plt.rcParams['font.size'] = 8.0
+    plt.rcParams['figure.figsize'] = 12, 8
+    plt.pie(frequencies.values(), labels=frequencies.keys(), autopct='%1.1f%%')
     plt.show()
 
 
@@ -324,6 +341,7 @@ def loadTranscripts(path):
     transcripts = []
     for file in os.listdir(path):
         if file.endswith(".pdf"):
+            #print(file)
             transcript = getTranscript(path + file)
             stu = generateStudent(transcript)
             transcripts.append(stu)
@@ -351,7 +369,7 @@ def getStudentByName(name, studentList):
 
 
 def createClassDist(studentList, semester):
-    # plots a histogram of the distribution of classes taken by students
+    # plots a histogram of the distribution of class subjects taken by students
     classes = {}
     if semester == "all":
         for student in studentList:
@@ -375,26 +393,56 @@ def createClassDist(studentList, semester):
 
 
 def singleStudent(members):
-    stu = None
-    while stu is None:
-        name = input("Enter a name: ")
+    # mini menu that either prints out all students or allows user to search student by name
+    print("\n"*100)
+    print("\u001b[32mSingle Student Menu\u001b[0m")
+    print("1: Print all students")
+    print("2: Search for student by name")
+    print("3: Return to main menu")
+    print("\n"*3)
+    choice = int(input("Enter your choice:"))
+    if choice == 1:
+        print('\n')
+        print("All students: ")
+        for student in members:
+            print("\t-\t", student.name)
+        print('\n')
+        singleStudent(members)
+        return
+    elif choice == 2:
+        name = input("Enter name, or enter L to return: ")
+        if name == "L":
+            return
         stu = getStudentByName(name, members)
+        if stu is not None:
+            stu.prStu()
+            stu.plotStudentProgress()
+        else:
+            print("No student found. Try again.")
+            return
+    elif choice == 3:
+        return
+    else:
+        print("Invalid choice. Try again.")
+        singleStudent(members)
+        return
 
-    stu.prStu()
-    stu.plotStudentProgress()
+
 
 
 def wholeOrg(members):
     # plots the progress of the whole organization
     semesters = []
     for student in members:
-        for semester in student.semester:
+        for semester in student.history.keys():
             if semester not in semesters:
                 semesters.append(semester)
     semesters.sort()
     for semester in semesters:
         print(semester)
         createClassDist(members, semester)
+
+
 
 
 mainMenu()
