@@ -54,11 +54,13 @@ class Student:
     def quickPrint(self):
         # Prints a quick summary of the student
         print(self.name + " is pursuing a major in " + self.major + " with a cumulative GPA of " + str(self.cumgpa))
-        if self.minor != "":
-            print("also, a minor: " + self.minor)
+        # if self.minor != "":
+        #     print("also, a minor: " + self.minor)
 
     def getSemClasses(self, semester):
         # Returns a list of all classes taken in a given semester
+        if semester not in self.history.keys():
+            return
         return self.history[semester].courses
 
     def getClasses(self):
@@ -380,6 +382,8 @@ def createClassDist(studentList, semester):
                     classes[course.subject] = 1
     else:
         for student in studentList:
+            if student.getSemClasses(semester) is None:
+                continue
             for course in student.getSemClasses(semester):
                 if (course.subject + course.code) in classes:
                     classes[course.subject + course.code] += 1
@@ -431,16 +435,45 @@ def singleStudent(members):
 
 
 def wholeOrg(members):
-    # plots the progress of the whole organization
-    semesters = []
-    for student in members:
-        for semester in student.history.keys():
-            if semester not in semesters:
-                semesters.append(semester)
-    semesters.sort()
-    for semester in semesters:
-        print(semester)
-        createClassDist(members, semester)
+    #menu for whole organization commands
+    print("\n"*5)
+    print("\u001b[32mWhole Organization Menu\u001b[0m")
+    print("1: Plot pie chart of majors/minors")
+    print("2: Plot pie chart of subjects taken")
+    print("3: Plot histogram of class distribution")
+    print("4: Print all students with GPA")
+    print("5: Return to main menu")
+    print("\n"*3)
+    choice = int(input("Enter your choice:"))
+    if choice == 1:
+        majors = groupStudentsMM(members)
+        plotPieChartMMclass(majors)
+        wholeOrg(members)
+        return
+    elif choice == 2:
+        classes = groupStudentsClass(members, "all")
+        plotPieChartSubjects(classes)
+        wholeOrg(members)
+        return
+    elif choice == 3:
+        createClassDist(members, "all")
+        wholeOrg(members)
+        return
+    elif choice == 4:
+        print("\n")
+        for student in members:
+            student.quickPrint()
+        print("\n")
+        wholeOrg(members)
+        return
+    elif choice == 5:
+        return
+    else:
+        print("Invalid choice. Try again.")
+        wholeOrg(members)
+        return
+
+
 
 
 
