@@ -2,6 +2,8 @@ from PyPDF2 import PdfReader
 import os
 import seaborn as sns
 import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
 
 
 class Course:
@@ -23,12 +25,14 @@ class Course:
 
 class Semester:
     # courses for a semester
-    def __init__(self, _courses, _termGPA):
+    def __init__(self, _courses, _termGPA, DDS=""):
         self.courses = _courses
         self.termGPA = float(_termGPA)
+        self.DDS = DDS
 
     def __str__(self):
-        return "Term GPA: " + str(self.termGPA) + "\n" + "\n".join([str(course) for course in self.courses])
+        return "Term GPA: " + str(self.termGPA) + "\n" + self.DDS + "\n" + "\n".join(
+            [str(course) for course in self.courses])
 
 
 class Student:
@@ -116,6 +120,7 @@ def extractSemesterCourses(semester, transcript):
     tempInstructor = ""
     tempSubject = ""
     tempGrade = ""
+
     courses = []
 
     for line in currSem.split("\n"):
@@ -176,28 +181,26 @@ def mainMenu():
         else:
             print("Invalid choice")
 
-def groupMenu(mb):
-    # Menu for the group options
-    print("\u001b[32mGroup tools!\033[0m")
-    print("Please select an option:")
-    print("1. Group students by major/minor")
-    print("2. Group students by classes")
-    print("3. Go back")
-    print("\n" * 3)
-    choice = input("Enter your choice: ")
-    while int(choice) < 1 or int(choice) > 4:
-        choice = input("Wrong entry, try again: ")
-    if choice == "1":
-        majors = groupStudentsMM(mb)
-        plotPieChartMMclass(majors)
-        # if len(minors) > 0:
-        #     plotPieChartMMclass(minors)
-    elif choice == "2":
-        cls = groupStudentsClass(mb, "SP 2023")
-        plotPieChartSubjects(cls)
 
-    elif choice == "3":
-        return
+def gradeDraft(members):
+    # Grade draft tool,
+    # selects team captains based off GPA, from top 25% of grades
+    # team size is max 4
+    # also puts members into a dataframe
+    print("\u001b[32mGrade Draft!\033[0m")
+    df = pd.DataFrame(columns=["Name", "GPA", "Major", "Team"])
+    for member in members:
+        df = df.append({"Name": member.name, "GPA": member.cumgpa, "Major": member.major, "Team": "None"},
+                       ignore_index=True)
+    df = df.sort_values(by=["GPA"], ascending=False)
+    df = df.reset_index(drop=True)
+
+    print("Team Captains:")
+    print(df.head(int(len(df) * 0.25))[["Name", "Major"]])
+    print("\n")
+    print("Team Members:")
+    print(df.tail(int(len(df) * 0.75))[["Name", "Major"]])
+    print("\n")
 
 
 def getTranscript(filename):
@@ -209,7 +212,7 @@ def getTranscript(filename):
 
 def getStudentName(transcript):
     # returns the name of the student
-    #print(transcript)
+    # print(transcript)
     temp = transcript.split('\n')
     try:
         temp = temp[1][temp[1].find("Name:") + 6:]
@@ -274,15 +277,15 @@ def generateStudent(transcript):
 def groupStudentsMM(studentList):
     # groups students by major and minor
     majors = {}
-    #minors = {}
+    # minors = {}
     for student in studentList:
         if student.major not in majors.keys():
             majors[student.major] = []
-        #elif student.minor not in minors.keys():
-            #minors[student.minor] = []
+        # elif student.minor not in minors.keys():
+        # minors[student.minor] = []
         majors[student.major].append(student)
-        #if student.minor != "":
-            #minors[student.minor].append(student)
+        # if student.minor != "":
+        # minors[student.minor].append(student)
 
     for major in majors:
         if len(majors[major]) > 1:
@@ -296,7 +299,7 @@ def groupStudentsMM(studentList):
     #             print(student.name)
     #
     print('\n')
-    return majors#, minors
+    return majors  # , minors
 
 
 def groupStudentsClass(studentList, semester):
@@ -343,7 +346,7 @@ def loadTranscripts(path):
     transcripts = []
     for file in os.listdir(path):
         if file.endswith(".pdf"):
-            #print(file)
+            # print(file)
             transcript = getTranscript(path + file)
             stu = generateStudent(transcript)
             transcripts.append(stu)
@@ -396,15 +399,94 @@ def createClassDist(studentList, semester):
     plt.show()
 
 
+def createBoxPlot(studentList):
+    # creates a box plot of the distribution of cumulative GPAs for students
+    gpa = []
+    for student in studentList:
+        gpa.append(student.cumgpa)
+    gpa.sort()
+    med = np.median(gpa)
+    q1 = np.median(gpa[:len(gpa) // 2])
+    q3 = np.median(gpa[len(gpa) // 2:])
+    plt.suptitle("Distribution of CUMGPAS!!!", fontsize=18)
+    plt.title("Q1: " + str(q1) + " MEDIAN: " + str(med) + " Q3: " + str(q3), fontsize=12)
+    plt.boxplot(gpa, labels=["lads"])
+    plt.show()
+
+
+def deansListers(members):
+    print("\n")
+    print("Dean's List:")
+    for student in members:
+        if 3.5 <= student.cumgpa < 3.75:
+            print("\t-\t", student.name, "(", student.cumgpa, ")")
+    print("\n")
+    print("Dean's Distinguished Scholars:")
+    for student in members:
+        if student.cumgpa >= 3.75:
+            print("\t-\t", student.name, "(" + student.cumgpa + ")")
+    print("\n")
+
+
+def wholeOrg(members):
+    # menu for whole organization commands
+    print("\n" * 5)
+    print("\u001b[32mWhole Organization Menu\u001b[0m")
+    print("1: Plot pie chart of majors/minors")
+    print("2: Plot pie chart of subjects taken")
+    print("3: Plot histogram of class distribution")
+    print("4: Print all students with GPA")
+    print("5: Dean's List and Dean's Distinguished Scholars")
+    print("6: Box Plot of Students Cumulative GPAs")
+    print("7: Return to main menu")
+    print("\n" * 3)
+    choice = int(input("Enter your choice: "))
+    if choice == 1:
+        majors = groupStudentsMM(members)
+        plotPieChartMMclass(majors)
+        wholeOrg(members)
+        return
+    elif choice == 2:
+        classes = groupStudentsClass(members, "all")
+        plotPieChartSubjects(classes)
+        wholeOrg(members)
+        return
+    elif choice == 3:
+        createClassDist(members, "all")
+        wholeOrg(members)
+        return
+    elif choice == 4:
+        print("\n")
+        for student in members:
+            student.quickPrint()
+        print("\n")
+        wholeOrg(members)
+        return
+    elif choice == 5:
+        deansListers(members)
+        wholeOrg(members)
+        return
+    elif choice == 6:
+        createBoxPlot(members)
+        wholeOrg(members)
+        return
+    elif choice == 7:
+        return
+    else:
+        print("Invalid choice. Try again.")
+        wholeOrg(members)
+        return
+
+
 def singleStudent(members):
-    # mini menu that either prints out all students or allows user to search student by name
-    print("\n"*100)
+    # submenu that either prints out all students or allows user to search student by name
+    print("\n" * 100)
     print("\u001b[32mSingle Student Menu\u001b[0m")
     print("1: Print all students")
     print("2: Search for student by name")
     print("3: Return to main menu")
-    print("\n"*3)
-    choice = int(input("Enter your choice:"))
+    print("\n" * 3)
+    choice = int(input("Enter your choice: "))
     if choice == 1:
         print('\n')
         print("All students: ")
@@ -432,50 +514,33 @@ def singleStudent(members):
         return
 
 
-
-
-def wholeOrg(members):
-    #menu for whole organization commands
-    print("\n"*5)
-    print("\u001b[32mWhole Organization Menu\u001b[0m")
-    print("1: Plot pie chart of majors/minors")
-    print("2: Plot pie chart of subjects taken")
-    print("3: Plot histogram of class distribution")
-    print("4: Print all students with GPA")
-    print("5: Return to main menu")
-    print("\n"*3)
-    choice = int(input("Enter your choice:"))
-    if choice == 1:
-        majors = groupStudentsMM(members)
+def groupMenu(mb):
+    # Menu for the group options
+    print("\u001b[32mGroup tools!\033[0m")
+    print("Please select an option:")
+    print("1. Group students by major/minor")
+    print("2. Group students by classes")
+    print("3. Group students for Grade Draft")
+    print("4. Go back")
+    print("\n" * 3)
+    choice = input("Enter your choice: ")
+    while int(choice) < 1 or int(choice) > 4:
+        choice = input("Wrong entry, try again: ")
+    if choice == "1":
+        majors = groupStudentsMM(mb)
         plotPieChartMMclass(majors)
-        wholeOrg(members)
-        return
-    elif choice == 2:
-        classes = groupStudentsClass(members, "all")
-        plotPieChartSubjects(classes)
-        wholeOrg(members)
-        return
-    elif choice == 3:
-        createClassDist(members, "all")
-        wholeOrg(members)
-        return
-    elif choice == 4:
-        print("\n")
-        for student in members:
-            student.quickPrint()
-        print("\n")
-        wholeOrg(members)
-        return
-    elif choice == 5:
+        # if len(minors) > 0:
+        #     plotPieChartMMclass(minors)
+    elif choice == "2":
+        cls = groupStudentsClass(mb, "SP 2023")
+        plotPieChartSubjects(cls)
+    elif choice == "3":
+        gradeDraft(mb)
+    elif choice == "4":
         return
     else:
-        print("Invalid choice. Try again.")
-        wholeOrg(members)
-        return
-
-
-
-
+        print("Invalid choice")
+        groupMenu(mb)
 
 
 mainMenu()
