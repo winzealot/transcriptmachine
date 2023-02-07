@@ -409,7 +409,7 @@ def createBoxPlot(studentList):
     q1 = np.median(gpa[:len(gpa) // 2])
     q3 = np.median(gpa[len(gpa) // 2:])
     plt.suptitle("Distribution of CUMGPAS!!!", fontsize=18)
-    plt.title("Q1: " + str(q1) + " MEDIAN: " + str(med) + " Q3: " + str(q3), fontsize=12)
+    plt.title("MEAN: " + str(round(float(np.mean(gpa)), 3)) + " | Q1: " + str(q1) + " | MEDIAN: " + str(med) + " | Q3: " + str(q3), fontsize=12)
     plt.boxplot(gpa, labels=["lads"])
     plt.show()
 
@@ -419,12 +419,12 @@ def deansListers(members):
     print("Dean's List:")
     for student in members:
         if 3.5 <= student.cumgpa < 3.75:
-            print("\t-\t", student.name, "(", student.cumgpa, ")")
+            print("\t-\t", student.name)
     print("\n")
     print("Dean's Distinguished Scholars:")
     for student in members:
         if student.cumgpa >= 3.75:
-            print("\t-\t", student.name, "(" + student.cumgpa + ")")
+            print("\t-\t", student.name)
     print("\n")
 
 
